@@ -4,12 +4,46 @@
 #include <string.h>     // memset
 #include <sys/socket.h> 
 #include <arpa/inet.h>  // htonl, htons
+#include <pthread.h>
 
 #define BUFFERSIZE 2048
 static inline void error(char *str) { perror(str); exit(1);}
+// Max 100 connections
+static int connection_arr[100];
+static size_t head = 0;
 
 void *handler(void *arg) {
+  int initialized_connection = *((int *) arg);
+  fprintf(stderr, "Processing current connection...\n");
 
+  int this_connection_makes_sense = 1;
+
+  while (this_connection_makes_sense) {
+      
+    char buffer[BUFFERSIZE];
+      
+    int n = read(initialized_connection, buffer, BUFFERSIZE);
+    if (n <= 0) {
+      this_connection_makes_sense = 0; continue;
+      fprintf(stderr, "server failed receiving data\n");	  
+    } else {
+      buffer[n] = 0;
+    }   
+    fprintf(stderr, "server received %d bytes: %s\n", n, buffer);
+
+    char response [20];
+    int code = 0;
+    for (int i = 0 ; buffer[i] ; code += buffer[i++]);
+      
+    sprintf(response, "%d", code);
+
+    n = write(initialized_connection, response, strlen(response));
+    if (n < 0) {
+      this_connection_makes_sense = 0; continue;
+      fprintf(stderr, "server failed sending data\n");
+    } 
+    fprintf(stderr, "server sent %d bytes: %s\n", n, response);         
+  }
 }
 
 
@@ -48,56 +82,25 @@ int main(int argc, char **argv) {
 
   int KEEP_WORKING = 1;
   while (KEEP_WORKING) {
-
     fprintf(stderr, "Waiting for a new connection...");
     int initialized_connection = accept(opened_socket, NULL, NULL);
-
-
-
-
-
-
     
     if (initialized_connection < 0) {
       error("Accept failed");
     } else {      
       fprintf(stderr, "Done!\n");
+
+      // create new thread
+      fprintf(stderr, "Creating thread\n");
+      pthread_t p;
+      pthread_create(&p, NULL, handler, &initialized_connection);
     }
-
-    fprintf(stderr, "Process current connection...\n");
-
-    int this_connection_makes_sense = 1;
-
-    while (this_connection_makes_sense) {
-      
-      char buffer[BUFFERSIZE];
-      
-      int  n = read(initialized_connection, buffer, BUFFERSIZE);
-      if (n <= 0) {
-	this_connection_makes_sense = 0; continue;
-	fprintf(stderr, "server failed receiving data\n");	  
-      } else {
-	buffer[n] = 0;
-      }   
-      fprintf(stderr, "server received %d bytes: %s\n", n, buffer);
-
-      char response [20];
-      int code = 0;
-      for (int i = 0 ; buffer[i] ; code += buffer[i++]);
-      
-      sprintf(response, "%d", code);
-
-      n = write(initialized_connection, response, strlen(response));
-      if (n < 0) {
-	this_connection_makes_sense = 0; continue;
-	fprintf(stderr, "server failed sending data\n");
-      } 
-      fprintf(stderr, "server sent %d bytes: %s\n", n, response);         
-
-    }
-    close(initialized_connection);
+    connection_arr[head] = initialized_connection;
+    head++;
   }
-
-  
-  
+  fprintf(stderr, "Closing connection");
+  for (size_t i = 0; i < head; ++i) {
+    fprintf(stderr, "Closing connection: %d\n", connection_arr[i]);
+    close(connection_arr[i]);
+  }
 }

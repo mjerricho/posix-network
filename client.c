@@ -41,6 +41,8 @@ int main(int argc, char **argv) {
   while(1) {
     // Prepare the data to be sent
     char buffer[BUFFERSIZE] = "GET\n";
+    fprintf(stderr, "Input: ");
+    fprintf(stderr, "\n");
     fscanf(stdin, "%s", buffer);
     if (buffer[0] == 'q' && strlen(buffer) == 1) break;
     
