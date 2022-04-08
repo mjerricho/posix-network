@@ -8,6 +8,10 @@
 #define BUFFERSIZE 2048
 static inline void error(char *str) { perror(str); exit(1);}
 
+void *handler(void *arg) {
+
+}
+
 
 int main(int argc, char **argv) {
 
@@ -47,6 +51,13 @@ int main(int argc, char **argv) {
 
     fprintf(stderr, "Waiting for a new connection...");
     int initialized_connection = accept(opened_socket, NULL, NULL);
+
+
+
+
+
+
+    
     if (initialized_connection < 0) {
       error("Accept failed");
     } else {      
